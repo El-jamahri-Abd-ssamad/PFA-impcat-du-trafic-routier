@@ -8,11 +8,10 @@
       - Développement  d'une application proposant des itinéraires durables et des recommandations  pour réduire l'empreinte carbone 
       
   # Technologies :
-      - Data Science : Python (Pandas , Numpy , Scikit-learn)
+      - Data Science : Python (Pandas , Numpy , Scikit-learn , etc... )
       - Framework web :
         * Backend : Flask
         * Frontend :
             + Mobile : React Native
-            + web site : Angulare
       - Base de données : PostgreSQL
       - APIs : Google Maps , TomTom Traffic , OpenWeatherMap
