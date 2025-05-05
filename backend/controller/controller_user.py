@@ -24,8 +24,8 @@ recognizer = sr.Recognizer()
 engine = pyttsx3.init()
 
 client = InferenceClient(
-    model= os.environ.get("HF_MODEL") ,
-    token= os.environ.get("HF_TOKEN") ,
+    model=os.environ["HF_MODEL"],
+    token=os.environ["HF_TOKEN"],
 )
 
 def speak(text):
@@ -34,6 +34,7 @@ def speak(text):
         engine.runAndWait()
     threading.Thread(target=run).start()
 
+# Flask (API)
 @user.route('/assistant', methods=['POST'])
 def assistant():
     with sr.Microphone() as source:
@@ -44,7 +45,8 @@ def assistant():
             print(f"Commande vocale : {commande}")
 
             response = client.text_generation(prompt=commande, max_new_tokens=200)
-            speak(response)
+
+            # On renvoie uniquement la réponse sous forme de texte, sans utiliser pyttsx3 ici
             return jsonify({"status": "success", "question": commande, "response": response}), 200
 
         except sr.UnknownValueError:
