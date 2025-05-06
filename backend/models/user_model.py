@@ -1,6 +1,8 @@
-""" class User:
+from dataclasses import dataclass
 
-    def __init__(self, email: str, password: str) -> None:
-        self.email: str = email
-        self.password: str = password
- """
+
+@dataclass
+class User:
+    email: str
+    password : str
+    

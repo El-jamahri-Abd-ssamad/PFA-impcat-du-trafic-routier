@@ -1,11 +1,18 @@
 import os
+import sys
+
+# Ajouter le répertoire racine du projet (flask_courses) à sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 from flask import Blueprint, request, jsonify
 import speech_recognition as sr # type: ignore
 import pyttsx3 # type: ignore
 import threading
 from huggingface_hub import InferenceClient  # type: ignore
+from backend.services.user_services import UserManager,User
 
 user = Blueprint('user', __name__)
+userService : UserManager = UserManager()
 
 @user.route('/login', methods=['POST'])
 def login():
@@ -14,10 +21,12 @@ def login():
     password = data.get('password')
 
     # Exemple simple, à remplacer par une vraie vérif
-    if login == "admin" and password == "1234":
-        return jsonify({"message": "Connexion réussie", "user_id": 1}), 200
-    else:
+    user: User = userService.auth(login, password)
+    if user is None:
         return jsonify({"message": "Identifiants incorrects"}), 401
+    else:
+        return jsonify({"message": "Connexion réussie", "user_id": 1}), 200
+        
 
 
 recognizer = sr.Recognizer()
