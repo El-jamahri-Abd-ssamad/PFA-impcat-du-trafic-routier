@@ -7,15 +7,19 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function App() {
+  const mapRef = useRef(null);
   const [location, setLocation] = useState(null);
   const [destination, setDestination] = useState(null);
-  const [route, setRoute] = useState(null);
+  const [route, setRoute] = useState(null); // État pour la route Fès-Meknès (données de l'API Flask)
   const [searchQuery, setSearchQuery] = useState("");
   const [coords, setCoords] = useState([]);
   const [barrierCoords, setBarrierCoords] = useState({ latitude: 35.7595, longitude: -5.8940 });
   const bottomSheetRef = useRef(null);
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []); // Points de "snap" pour le BottomSheet
-  const recentSearches = ["la tour eiffel", "bd richard-Lecir", "Rue du Grand Prieuré", "Palace de la Fontaine Timbaud"]; // Exemple de recherches récentes
+  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const recentSearches = ["la tour eiffel", "bd richard-Lecir", "Rue du Grand Prieuré", "Palace de la Fontaine Timbaud"];
+
+  const fesCoords = { latitude: 34.0372, longitude: -5.0063 }; // Coordonnées de Fès
+  const meknesCoords = { latitude: 33.8949, longitude: -5.5577 }; // Coordonnées de Meknès
 
   const co2Zone = [
     { latitude: 48.8584, longitude: 2.2945 },
@@ -24,7 +28,7 @@ export default function App() {
     { latitude: 48.8484, longitude: 2.2945 },
   ];
 
-  const TOMTOM_API_KEY = process.env.API_KEY;
+  // const TOMTOM_API_KEY = process.env.API_KEY; // Vous n'utilisez plus directement TomTom pour la route Fès-Meknès
 
   useEffect(() => {
     (async () => {
@@ -36,6 +40,27 @@ export default function App() {
 
       let currentLocation = await Location.getCurrentPositionAsync({});
       setLocation(currentLocation.coords);
+
+      // Récupérer les routes depuis votre API Flask
+      fetch('http://10.10.1.252:5000/api/routes') // Remplacez par l'URL de votre serveur Flask
+        .then(response => response.json())
+        .then(data => {
+          // Formatter les données pour le composant Polyline
+          const formattedRoute = data.map(coord => ({ latitude: coord[0], longitude: coord[1] }));
+          setRoute(formattedRoute);
+
+          // Ajuster la vue de la carte pour afficher la route (optionnel)
+          if (mapRef.current && formattedRoute.length > 0) {
+            mapRef.current.fitToCoordinates(formattedRoute, {
+              edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+              animated: true,
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Erreur lors de la récupération des routes :", error);
+          Alert.alert("Erreur", "Impossible de récupérer les routes depuis le serveur.");
+        });
     })();
   }, []);
 
@@ -45,13 +70,13 @@ export default function App() {
 
   const handleSearch = () => {
     searchLocation();
-    bottomSheetRef.current?.snapToIndex(0); // Replie le BottomSheet après la recherche (facultatif)
+    bottomSheetRef.current?.snapToIndex(0);
   };
 
   const searchLocation = async () => {
     if (!searchQuery) return;
 
-    const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(searchQuery)}.json?key=${TOMTOM_API_KEY}&limit=1`;
+    const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(searchQuery)}.json?key=${process.env.API_KEY}&limit=1`; // Assurez-vous que votre clé API TomTom est toujours configurée
 
     try {
       const response = await fetch(url);
@@ -60,7 +85,8 @@ export default function App() {
       if (data.results && data.results.length > 0) {
         const foundLocation = data.results[0].position;
         setDestination({ latitude: foundLocation.lat, longitude: foundLocation.lon });
-        fetchRoute(foundLocation.lat, foundLocation.lon);
+        // Vous pouvez choisir de tracer une route vers la destination recherchée ici si vous le souhaitez
+        // fetchRoute(location, { latitude: foundLocation.lat, longitude: foundLocation.lon }, setSomeOtherRouteState);
       } else {
         Alert.alert("Aucun résultat", "Lieu introuvable !");
       }
@@ -70,54 +96,33 @@ export default function App() {
     }
   };
 
-  const fetchRoute = async (destLat, destLon) => {
-    if (!location) {
-      Alert.alert("Erreur", "Impossible d'obtenir votre position.");
-      return;
-    }
-
-    const url = `https://api.tomtom.com/routing/1/calculateRoute/${location.latitude},${location.longitude}:${destLat},${destLon}/json?key=${TOMTOM_API_KEY}&routeType=fastest&traffic=false`;
-
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.routes && data.routes.length > 0) {
-        const points = data.routes[0].legs[0].points.map((point) => ({
-          latitude: point.latitude,
-          longitude: point.longitude,
-        }));
-        setRoute(points);
-      } else {
-        Alert.alert("Erreur", "Impossible de calculer l'itinéraire.");
-      }
-    } catch (error) {
-      console.error("Erreur route :", error);
-      Alert.alert("Erreur", "Impossible de calculer l'itinéraire.");
-    }
-  };
+  // La fonction fetchRoute n'est plus utilisée pour la route Fès-Meknès
+  // const fetchRoute = async (startCoords, endCoords, setRouteState) => {
+  //   // ... votre ancienne logique fetchRoute ...
+  // };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={styles.container}>
         {location ? (
           <MapView
+            ref={mapRef}
             style={StyleSheet.absoluteFillObject}
             initialRegion={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-              latitudeDelta: 0.1,
-              longitudeDelta: 0.1,
+              latitude: (fesCoords.latitude + meknesCoords.latitude) / 2,
+              longitude: (fesCoords.longitude + meknesCoords.longitude) / 2,
+              latitudeDelta: Math.abs(fesCoords.latitude - meknesCoords.latitude) * 1.5,
+              longitudeDelta: Math.abs(fesCoords.longitude - meknesCoords.longitude) * 1.5,
             }}
           >
             <Marker coordinate={location} title="Ma position" pinColor="blue" />
             {destination && <Marker coordinate={destination} title="Destination" />}
-            {route && <Polyline coordinates={route} strokeWidth={4} strokeColor="red" />}
+            {route && <Polyline coordinates={route} strokeWidth={4} strokeColor="purple" />}
             <Polygon coordinates={co2Zone} fillColor="rgba(255,0,0,0.4)" strokeColor="orange" strokeWidth={2} />
             {coords.map((coord, index) => (
               <Marker
                 key={`flask-point-${index}`}
-                coordinate={{ latitude: coord.latitude, longitude: coord.longitude }}
+                coordinate={{ latitude: coord[0], longitude: coord[1] }} // Ajustement ici
                 title={`Point ${index + 1}`}
                 pinColor="green"
               />
@@ -133,7 +138,7 @@ export default function App() {
 
         <BottomSheet
           ref={bottomSheetRef}
-          index={1} // Position ouverte par défaut (ajuste selon tes besoins)
+          index={1}
           snapPoints={snapPoints}
           onChange={handleSheetChange}
           style={styles.bottomSheet}
@@ -200,7 +205,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   bottomSheetBackground: {
-    backgroundColor: "#9ea6f0", // Violet soutenu pour le fond du BottomSheet
+    backgroundColor: "#9ea6f0",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -211,43 +216,43 @@ const styles = StyleSheet.create({
     width: 40,
   },
   bottomSheetContainer: {
-    padding: 20, // Augmenter un peu le padding général
+    padding: 20,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f0f0", // Blanc cassé pour le fond du champ de recherche
+    backgroundColor: "#f0f0f0",
     borderRadius: 10,
     paddingHorizontal: 15,
-    marginBottom: 20, // Augmenter la marge en bas
+    marginBottom: 20,
   },
   searchIcon: {
     marginRight: 15,
-    color: "#777", // Gris pour l'icône de recherche
+    color: "#777",
   },
   searchInput: {
     flex: 1,
-    height: 45, // Augmenter un peu la hauteur
+    height: 45,
     fontSize: 16,
-    color: "#333", // Texte de la recherche en violet foncé
+    color: "#333",
   },
   shortcuts: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 25, // Augmenter la marge en bas
+    marginBottom: 25,
   },
   shortcutButton: {
-    backgroundColor: "#7b68ee", // Violet pour les boutons de raccourcis
-    borderRadius: 15, // Bords arrondis
+    backgroundColor: "#7b68ee",
+    borderRadius: 15,
     paddingVertical: 10,
     paddingHorizontal: 15,
     alignItems: "center",
-    flex: 1, // Permet de répartir l'espace
-    marginHorizontal: 5, // Ajouter un peu d'espace entre les boutons
+    flex: 1,
+    marginHorizontal: 5,
   },
   shortcutText: {
     marginTop: 5,
-    color: "white", // Texte blanc pour les boutons
+    color: "white",
     fontWeight: "bold",
   },
   recentSearchesContainer: {
@@ -257,21 +262,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 15,
-    color: "#333", // Violet foncé pour le titre
+    color: "#333",
   },
   recentItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#d3d3d3", // Gris clair pour le séparateur
+    borderBottomColor: "#d3d3d3",
   },
   recentIcon: {
     marginRight: 15,
-    color: "#8e44ad", // Violet pour l'icône d'historique
+    color: "#8e44ad",
   },
   recentText: {
     fontSize: 16,
-    color: "#333", // Violet foncé pour le texte de la recherche récente
+    color: "#333",
   },
 });
