@@ -51,7 +51,7 @@ def robust_score(y_true, y_pred):
 
 def train_model():
     alpha, beta = 0.5, 0.5
-    df = pd.read_csv('/datalab/data_cleaned.csv', sep=';')
+    df = pd.read_csv(' F://pfa//pfaaaa//PFA-impcat-du-trafic-routier//backend//data_analyst//data_cleaned.csv', sep=';')
     df.columns = df.columns.str.strip()
     mapping = {'Fluide':1.0,'Pre_sature':1.5,'Ouvert':1.2,'Invalide':2.0}
     df['etat_factor'] = df['Etat trafic'].map(mapping)
@@ -60,7 +60,7 @@ def train_model():
     df = extract_spatial_features(df)
     df['cost'] = (alpha * df['distance_arc'] + beta * df['Emission_CO2']) * df['etat_factor']
 
-    weather = pd.read_csv('/datalab/data_weather_cleaned.csv', sep=';')
+    weather = pd.read_csv(' F://pfa//pfaaaa//PFA-impcat-du-trafic-routier//backend//data_analyst//data_weather_cleaned.csv', sep=';')
     weather['Date'] = pd.to_datetime(weather['AAAAMMJJ'].astype(str), format='%Y%m%d').dt.date
     weather = weather[['Date','RR','TN','TX','TM','FF2M','FXI2','DXI2','HXI2']]
     weather.columns = ['Date','precip','temp_min','temp_max','temp_mean','wind_speed','wind_gust','gust_dir','humidex']
