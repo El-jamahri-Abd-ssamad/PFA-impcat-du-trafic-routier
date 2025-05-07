@@ -10,6 +10,18 @@ import pyttsx3 # type: ignore
 import threading
 from huggingface_hub import InferenceClient  # type: ignore
 from backend.services.user_services import UserManager,User
+from backend.data_analyst.ML import predict_route
+
+
+import joblib
+import numpy as np
+import pandas as pd
+# ... autres imports nécessaires pour votre modèle
+from sklearn.linear_model import LogisticRegression
+# ...
+
+
+
 
 user = Blueprint('user', __name__)
 userService : UserManager = UserManager()
@@ -26,6 +38,7 @@ def login():
         return jsonify({"message": "Identifiants incorrects"}), 401
     else:
         return jsonify({"message": "Connexion réussie", "user_id": 1}), 200
+
         
 
 
@@ -62,3 +75,18 @@ def assistant():
             return jsonify({"status": "error", "message": "Je n'ai pas compris."}), 400
         except sr.RequestError:
             return jsonify({"status": "error", "message": "Erreur de connexion à Google Speech."}), 500
+
+
+
+
+
+
+@user.route('/routes', methods=['GET'])
+def get_routes():
+    depart = (48.8600, 2.3200)
+    arrivee = (48.8800, 2.3000)
+
+    # Appel de la fonction
+    routes = predict_route(depart, arrivee, model_file='best_model2.joblib')
+    print(routes)
+    return jsonify(routes)
