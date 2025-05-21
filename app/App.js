@@ -23,6 +23,10 @@ import OnboardingScreen3 from './screens/OnboardingScreen3';
 import OnboardingScreen4 from './screens/OnboardingScreen4';
 import OnboardingScreen5 from './screens/OnboardingScreen5';
 
+import Constants from 'expo-constants';
+const { apiHost, apiPort } = Constants.expoConfig.extra;
+export const API_URL = `http://${apiHost}:${apiPort}`;
+
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
